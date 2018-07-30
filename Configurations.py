@@ -16,6 +16,11 @@ class TopConfig:
         self.intf_ratio = 1 / 12
         self.intf_len = np.int(np.floor(self.N * self.intf_ratio))
 
+        # Training config
+        self.SNR_set_gen_training = np.array([0])
+        self.SNR_set_start = 0.0
+        self.SNR_set_size = 7
+
     def parse_cmd_line(self, argv):
         if len(argv) == 1:
             return

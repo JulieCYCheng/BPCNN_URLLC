@@ -28,5 +28,7 @@ def generate_noise_samples(code, top_config, train_config, gen_data_for):
         exit(0)
 
     # BP iteration
+    bp_decoder = BP_Decoder.BP_NetDecoder(H_matrix, batch_size_each_SNR)
+
 
 

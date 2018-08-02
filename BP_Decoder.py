@@ -86,12 +86,12 @@ class BP_NetDecoder:
         self.batch_size = batch_size
 
         self.llr_placeholder = tf.placeholder(tf.float32, [batch_size, self.N])
-        self.llr_into_bp_net, self.xe_0, self.xe_v2c_pre_iter_assign, self.start_next_iteration, self.dec_out = self.build_network()
+        self.llr_into_bp_net, self.xe_0, self.xe_v2c_pre_iter_assign, self.start_next_iteration, self.dec_out = self.build_bp_network()
         self.llr_assign = self.llr_into_bp_net.assign(tf.transpose(self.llr_placeholder))
 
         init = tf.global_variables_initializer()
         self.sess = tf.Session()  # open a session
-        print('Open a tf session!')
+        print('Open a tf session! (BP_Decoder.py/ BP_NetDecoder)')
         self.sess.run(init)
 
     # def __del__(self):
@@ -119,7 +119,7 @@ class BP_NetDecoder:
         xe_c_sumv = tf.add(xe0, tf.matmul(H_var_to_chk, xe_v_sumc))                         # shape: (E, B)
         return xe_v_sumc, xe_c_sumv
 
-    def build_network(self):
+    def build_bp_network(self):
         llr_into_BP_net = tf.Variable(np.ones([self.N, self.batch_size]), dtype=np.float32)     # shape: (N, B)
         xe0 = tf.matmul(self.H_xin_to_var, llr_into_BP_net, name='xe0')                         # shape: (E, B) = (E, N) x (N, B)
         xe_v2c_pre_iter = tf.Variable(np.ones([self.E, self.batch_size]), dtype=np.float32)

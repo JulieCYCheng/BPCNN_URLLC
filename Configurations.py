@@ -21,6 +21,19 @@ class TopConfig:
         self.SNR_set_start = 0.0
         self.SNR_set_size = 7
 
+        # CNN Net
+        self.feature_length = self.N
+        self.conv_layers_num = 4
+        self.dense_layers_num = 1
+        self.filter_sizes = np.array([9, 3, 3, 15])
+        self.feature_map_nums = np.array([64, 32, 16, 1])
+        self.currently_trained_net_id = 0
+        self.cnn_net_num = 1
+
+        # BP decoding
+        self.BP_iter_nums_gen_data = np.array([5, 5])
+        self.BP_iter_nums_simu = np.array([5, 5])
+
     def parse_cmd_line(self, argv):
         if len(argv) == 1:
             return
@@ -38,6 +51,19 @@ class TopConfig:
                 self.SNR_set_start = float(argv[ind + 1])
             elif argv[ind] == '-SnrSetSize':
                 self.SNR_set_size = int(argv[ind + 1])
+            elif argv[ind] == '-ConvLayNum':
+                self.conv_layers_num = int(argv[ind + 1])
+                print('Convolution layers number is set to %d' % self.conv_layers_num)
+            elif argv[ind] == '-DenseLayNum':
+                self.dense_layers_num = int(argv[ind + 1])
+                print('Dense layers number is set to %d' % self.dense_layers_num)
+            elif argv[id] == '-BP_IterForGenData':
+                self.BP_iter_nums_gen_data = np.fromstring(argv[ind + 1], np.int32, sep=' ')
+                print('BP iter for gen data is set to: %s' % np.array2string(self.BP_iter_nums_gen_data))
+            elif argv[id] == '-BP_IterForSimu':
+                self.BP_iter_nums_simu = np.fromstring(argv[ind + 1], np.int32, sep=' ')
+                print('BP iter for simulation is set to: %s' % np.array2string(self.BP_iter_nums_simu))
+
             else:
                 print('>>> Command not recognized: %s' % argv[ind])
                 exit(0)
@@ -56,3 +82,15 @@ class TrainConfig:
         # Test data info
         self.test_sample_num = 105000
         self.test_minibatch_size = 3500
+
+class NetConfig:
+    def __init__(self, top_config):
+
+        self.feature_length = top_config.feature_length
+        self.conv_layers_num = top_config.conv_layers_num
+        self.dense_layers_num = top_config.dense_layers_num
+        self.total_layers_num = self.conv_layers_num + self.dense_layers_num
+        self.filter_sizes = top_config.filter_sizes
+        self.feature_map_nums = top_config.feature_map_nums
+
+

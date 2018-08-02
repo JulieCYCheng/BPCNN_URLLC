@@ -19,6 +19,6 @@ if top_cnofig.function == 'GenData':
 
     # Generate training data
     ibc.generate_noise_samples(code, top_cnofig, train_config, net_config, 'Training', top_cnofig.BP_iter_nums_gen_data,
-                               top_cnofig.cnn_net_num)
+                               top_cnofig.currently_trained_net_id, top_cnofig.model_id)
 
 

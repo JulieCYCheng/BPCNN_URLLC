@@ -27,11 +27,12 @@ class TopConfig:
         self.dense_layers_num = 1
         self.filter_sizes = np.array([9, 3, 3, 15])
         self.feature_map_nums = np.array([64, 32, 16, 1])
-        self.currently_trained_net_id = 0
+        self.currently_trained_net_id = 0           # TODO: What is this?
         self.cnn_net_num = 1
+        self.model_id = np.array([0])
 
         # BP decoding
-        self.BP_iter_nums_gen_data = np.array([5, 5])
+        self.BP_iter_nums_gen_data = np.array([5])
         self.BP_iter_nums_simu = np.array([5, 5])
 
     def parse_cmd_line(self, argv):
@@ -74,14 +75,24 @@ class TrainConfig:
     def __init__(self, top_config):
 
         self.SNR_set_gen_training = top_config.SNR_set_gen_training
+        self.currently_trained_net_id = top_config.currently_trained_net_id
 
         # Training data info
         self.training_sample_num = 1999200
         self.training_minibatch_size = 1400
+        self.training_folder = "./TrainingData"
+        self.training_feature_file = format("./TrainingData/EstNoise_before_cnn%d.dat" % self.currently_trained_net_id)
+        self.training_noise_label_file = "./TrainingData/RealNoise.dat"
+        self.training_intf_label_file = "./TrainingData/RealIntf.dat"
 
         # Test data info
         self.test_sample_num = 105000
         self.test_minibatch_size = 3500
+        self.test_folder = "./TestData"
+        self.test_feature_file = format("./TestData/EstNoise_before_cnn%d.dat" % self.currently_trained_net_id)
+        self.test_noise_label_file = "./TestData/RealNoise.dat"
+        self.test_intf_label_file = "./TestData/RealIntf.dat"
+
 
 class NetConfig:
     def __init__(self, top_config):

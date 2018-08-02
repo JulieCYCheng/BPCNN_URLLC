@@ -1,6 +1,9 @@
 import numpy as np
 import BP_Decoder
 import ConvNet
+import tensorflow as tf
+import datetime
+import os
 
 
 def generate_snr_set(top_config):
@@ -10,7 +13,7 @@ def generate_snr_set(top_config):
     return SNR_set
 
 
-def generate_noise_samples(code, top_config, train_config, net_config, gen_data_for, bp_iter_num, num_of_cnn):
+def generate_noise_samples(code, top_config, train_config, net_config, gen_data_for, bp_iter_num, num_of_cnn, model_id):
 
     global batch_size_each_SNR
     G_matrix = code.G_matrix
@@ -40,10 +43,35 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
     denoise_net_out = {}
     intf_net_out = {}
 
-    for net_id in range(num_of_cnn):        # TODO: doesn't work if num_of_cnn=0
+    for net_id in range(num_of_cnn):        # TODO: Doesn't work if num_of_cnn=0
         conv_net[net_id] = ConvNet.ConvNet(net_config, None, net_id)
         denoise_net_in[net_id], denoise_net_out[net_id],  intf_net_out[net_id] = conv_net[net_id].build_network()
 
+    # Init gragh
+    init = tf.global_variables_initializer()
+    sess = tf.Session()
+    sess.run(init)
 
+    # Restore cnn networks before the target CNN        # TODO: Doesn't work if num_of_cnn=0
+    for net_id in range(num_of_cnn):                    # TODO: Why restore here?
+        conv_net[net_id].restore_network_with_model_id(sess, net_config.total_layers, model_id[0:(net_id + 1)])
+
+    start = datetime.datetime.now()
+
+    if gen_data_for == 'Training':
+        if not os.path.isdir(train_config.training_folder):
+            os.mkdir(train_config.training_folder)
+        fout_est_noise = open(train_config.training_feature_file, 'wb')
+        fout_real_noise = open(train_config.training_noise_label_file, 'wb')
+        fout_real_intf = open(train_config.training_intf_label_file, 'wb')
+    elif gen_data_for == 'Test':
+        if not os.path.isdir(train_config.test_folder):
+            os.mkdir(train_config.test_folder)
+        fout_est_noise = open(train_config.test_feature_file, 'wb')
+        fout_real_noise = open(train_config.test_noise_label_file, 'wb')
+        fout_real_intf = open(train_config.test_intf_label_file, 'wb')
+    else:
+        print('>>> Invalid objective of data generation! (ibc.py)')
+        exit(0)
 
 

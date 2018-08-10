@@ -58,13 +58,12 @@ class TopConfig:
             elif argv[ind] == '-DenseLayNum':
                 self.dense_layers_num = int(argv[ind + 1])
                 print('Dense layers number is set to %d' % self.dense_layers_num)
-            elif argv[id] == '-BP_IterForGenData':
+            elif argv[ind] == '-BP_IterForGenData':
                 self.BP_iter_nums_gen_data = np.fromstring(argv[ind + 1], np.int32, sep=' ')
                 print('BP iter for gen data is set to: %s' % np.array2string(self.BP_iter_nums_gen_data))
-            elif argv[id] == '-BP_IterForSimu':
+            elif argv[ind] == '-BP_IterForSimu':
                 self.BP_iter_nums_simu = np.fromstring(argv[ind + 1], np.int32, sep=' ')
                 print('BP iter for simulation is set to: %s' % np.array2string(self.BP_iter_nums_simu))
-
             else:
                 print('>>> Command not recognized: %s' % argv[ind])
                 exit(0)

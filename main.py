@@ -14,11 +14,11 @@ net_config = Configurations.NetConfig(top_cnofig)
 code = lbc.LDPC(top_cnofig.N, top_cnofig.K, top_cnofig.G_file, top_cnofig.H_file)
 
 if top_cnofig.function == 'GenData':
-    noise_io = DataIO.NoiseIO(top_cnofig, read_from_file=False)
-    intf_io = DataIO.IntfIO(top_cnofig, read_from_file=False)
+    noise_io = DataIO.NoiseIO(top_cnofig, read_from_file=False, noise_file=None)
+    intf_io = DataIO.IntfIO(top_cnofig, read_from_file=False, intf_file=None)
 
     # Generate training data
     ibc.generate_noise_samples(code, top_cnofig, train_config, net_config, 'Training', top_cnofig.BP_iter_nums_gen_data,
-                               top_cnofig.currently_trained_net_id, top_cnofig.model_id)
+                               top_cnofig.currently_trained_net_id, top_cnofig.model_id, noise_io, intf_io)
 
 

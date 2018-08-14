@@ -4,6 +4,7 @@ import ConvNet
 import tensorflow as tf
 import datetime
 import os
+import LinearBlkCodes as lbc
 
 
 def generate_snr_set(top_config):
@@ -12,10 +13,21 @@ def generate_snr_set(top_config):
 
     return SNR_set
 
+def denoising_and_calc_LLR_awgn(res_noise_power, y_receive, output_pre_decoder, net_in, net_out, intf_out, sess):
+    # estimate noise with cnn denoising
+    noise_before_cnn = y_receive - (output_pre_decoder * (-2) + 1)
+    noise_after_cnn = sess.run(net_out, feed_dict={net_in: noise_before_cnn})
+    predicted_intf_ind = sess.run(intf_out, feed_dict={net_in: noise_before_cnn})
 
-def generate_noise_samples(code, top_config, train_config, net_config, gen_data_for, bp_iter_num, num_of_cnn, model_id):
+    # calculate the LLR for next BP decoding
+    s_mod_plus_res_noise = y_receive - noise_after_cnn
+    LLR = s_mod_plus_res_noise * 2.0 / res_noise_power
+    return LLR, predicted_intf_ind
 
-    global batch_size_each_SNR
+def generate_noise_samples(code, top_config, train_config, net_config, gen_data_for, bp_iter_num, num_of_cnn, model_id,
+                           noise_io, intf_io):
+
+    global batch_size_each_SNR, total_batches
     G_matrix = code.G_matrix
     H_matrix = code.H_matrix
 
@@ -74,4 +86,32 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
         print('>>> Invalid objective of data generation! (ibc.py)')
         exit(0)
 
+    # Generating data
+    for ik in range(total_batches):
+        for SNR in top_config.SNR_set_gen_training:
+            x_bits, _, _, ch_noise, intf_labels, y_receive, LLR = lbc.encode_and_transmit(G_matrix, SNR, batch_size_each_SNR, noise_io, intf_io, top_config)
 
+            for iter in range(0, num_of_cnn + 1):
+                # BP decoder
+                u_BP_decoded = bp_decoder.decode(LLR.astype(np.float32), bp_iter_num[iter])
+
+                # CNN
+                if iter != num_of_cnn:
+                    res_noise_power = conv_net[iter].get_res_noise_power(model_id).get(np.float32(SNR))
+                    LLR, predicted_intf_ind = denoising_and_calc_LLR_awgn(res_noise_power, y_receive, u_BP_decoded, denoise_net_in[iter], denoise_net_out[iter], intf_net_out[iter], sess)
+
+            # reconstruct noise
+            noise_before_cnn = y_receive - (u_BP_decoded * (-2) + 1)
+            noise_before_cnn = noise_before_cnn.astype(np.float32)
+            noise_before_cnn.tofile(fout_est_noise)     # write features to file
+            ch_noise.tofile(fout_real_noise)            # write noise labels to file
+            intf_labels.tofile(fout_real_intf)          # write interference labels to file
+
+    fout_real_noise.close()
+    fout_est_noise.close()
+
+    sess.close()
+    end = datetime.datetime.now()
+
+    print("Time: %ds" % (end - start).seconds)
+    print("Finish generating %s data" % gen_data_for)

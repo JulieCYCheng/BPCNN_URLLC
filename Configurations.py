@@ -32,8 +32,8 @@ class TopConfig:
         self.model_id = np.array([0])
 
         # BP decoding
-        self.BP_iter_nums_gen_data = np.array([5])
-        self.BP_iter_nums_simu = np.array([5, 5])
+        self.BP_iter_nums_gen_data = np.array([25])
+        self.BP_iter_nums_simu = np.array([25, 25])
 
     def parse_cmd_line(self, argv):
         if len(argv) == 1:

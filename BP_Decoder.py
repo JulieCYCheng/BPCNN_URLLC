@@ -138,5 +138,18 @@ class BP_NetDecoder:
 
         return llr_into_BP_net, xe0, xe_v2c_pre_iter_assign, start_next_iteration, dec_out
 
+    def decode(self, llr_in, bp_iter_num):
+        real_batch_size, num_v_node = np.shape(llr_in)
+        if real_batch_size != self.batch_size:  # padding zeros
+            llr_in = np.append(llr_in, np.zeros([self.batch_size-real_batch_size, num_v_node], dtype=np.float32), 0)
+            # re-create an array and will not influence the value in original llr array.
+        self.sess.run(self.llr_assign, feed_dict={self.llr_placeholder: llr_in})
+        self.sess.run(self.xe_v2c_pre_iter_assign)
+        for iter in range(0, bp_iter_num-1):
+            self.sess.run(self.start_next_iteration)
+        y_dec = self.sess.run(self.dec_out)
+        if real_batch_size != self.batch_size:
+            y_dec = y_dec[0:real_batch_size, :]
 
+        return y_dec
 

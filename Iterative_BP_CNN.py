@@ -107,6 +107,11 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
             ch_noise.tofile(fout_real_noise)            # write noise labels to file
             intf_labels.tofile(fout_real_intf)          # write interference labels to file
 
+        if ik % 100 == 0:
+            print("%d batches finished!" % ik)
+            section = datetime.datetime.now()
+            print("Time: %ds" % (section - start).seconds)
+
     fout_real_noise.close()
     fout_est_noise.close()
 

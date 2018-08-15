@@ -23,6 +23,7 @@ class TopConfig:
 
         # CNN Net
         self.feature_length = self.N
+        self.noise_label_length = self.N
         self.conv_layers_num = 4
         self.dense_layers_num = 1
         self.filter_sizes = np.array([9, 3, 3, 15])
@@ -97,6 +98,7 @@ class NetConfig:
     def __init__(self, top_config):
 
         self.feature_length = top_config.feature_length
+        self.noise_label_length = top_config.noise_label_length
         self.conv_layers_num = top_config.conv_layers_num
         self.dense_layers_num = top_config.dense_layers_num
         self.total_layers_num = self.conv_layers_num + self.dense_layers_num

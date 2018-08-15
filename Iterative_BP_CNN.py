@@ -114,6 +114,7 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
 
     fout_real_noise.close()
     fout_est_noise.close()
+    fout_real_intf.close()
 
     sess.close()
     end = datetime.datetime.now()

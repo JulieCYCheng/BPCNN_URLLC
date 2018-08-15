@@ -1,5 +1,7 @@
 import numpy as np
 import tensorflow as tf
+import datetime
+import DataIO
 
 
 class ConvNet:
@@ -106,7 +108,7 @@ class ConvNet:
                                            formatter={'int': lambda d: "%d" % d})
             model_id_str = model_id_str[1:(len(model_id_str) - 1)]
             residual_noise_power_file = format("%sresidual_noise_property_netid%d_model%s.txt" % (
-            self.net_config.residual_noise_property_folder, self.net_id, model_id_str))
+                self.net_config.residual_noise_property_folder, self.net_id, model_id_str))
             data = np.loadtxt(residual_noise_power_file, dtype=np.float32)
             shape_data = np.shape(data)
             if np.size(shape_data) == 1:
@@ -116,3 +118,18 @@ class ConvNet:
                 for i in range(SNR_num):
                     self.res_noise_power_dict[data[i, 0]] = data[i, 1:shape_data[1]]
         return self.res_noise_power_dict
+
+    def train_network(self):
+        start = datetime.datetime.now()
+        dataio_train = DataIO.TrainingDataIO(self.train_config.training_feature_file,
+                                             self.train_config.training_noise_label_file,
+                                             self.train_config.training_intf_label_file,
+                                             self.train_config.training_sample_num,
+                                             self.net_config.feature_length,
+                                             self.net_config.noise_label_length)
+        dataio_test = DataIO.TestDataIO(self.train_config.test_feature_file,
+                                        self.train_config.test_noise_label_file,
+                                        self.train_config.test_intf_label_file,
+                                        self.train_config.test_sample_num,
+                                        self.net_config.feature_length,
+                                        self.net_config.noise_label_length)

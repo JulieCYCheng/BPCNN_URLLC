@@ -50,3 +50,37 @@ class IntfIO:
 
         return intf_labels
 
+class TrainingDataIO:
+    def __init__(self, feature_filename, label_filename, intf_filename, total_training_samples, feature_length, noise_label_length):
+        print("Construct the data IO class for training!\n")
+        self.fin_label = open(label_filename, "rb")
+        self.fin_feature = open(feature_filename, "rb")
+        self.fin_intf = open(intf_filename, "rb")
+        self.total_training_samples = total_training_samples
+        self.feature_length = feature_length
+        self.label_length = noise_label_length
+
+    def __del__(self):
+        print(">>> Delete the training data IO class! (DataIO.py)\n")
+        self.fin_feature.close()
+        self.fin_label.close()
+        self.fin_intf.close()
+
+class TestDataIO:
+    def __init__(self, feature_filename, label_filename, intf_filename, total_test_samples, feature_length, noise_label_length):
+        print("Construct the data IO class for test!\n")
+        self.fin_label = open(label_filename, "rb")
+        self.fin_feature = open(feature_filename, "rb")
+        self.fin_intf = open(intf_filename, "rb")
+        self.total_test_samples = total_test_samples
+        self.feature_length = feature_length
+        self.label_length = noise_label_length
+        # self.all_features = np.zeros(0)
+        # self.all_labels = np.zeros(0)
+        # self.data_position = 0
+
+    def __del__(self):
+        print(">>> Delete the training data IO class! (DataIO.py)\n")
+        self.fin_feature.close()
+        self.fin_label.close()
+        self.fin_intf.close()

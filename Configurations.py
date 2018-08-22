@@ -31,6 +31,7 @@ class TopConfig:
         self.currently_trained_net_id = 0           # TODO: What is this?
         self.cnn_net_num = 1
         self.model_id = np.array([0])
+        self.restore_network_from_file = False
 
         # BP decoding
         self.BP_iter_nums_gen_data = np.array([25])
@@ -84,6 +85,7 @@ class TrainConfig:
         self.training_feature_file = format("./TrainingData/EstNoise_before_cnn%d.dat" % self.currently_trained_net_id)
         self.training_noise_label_file = "./TrainingData/RealNoise.dat"
         self.training_intf_label_file = "./TrainingData/RealIntf.dat"
+        self.epoch_num = 200000
 
         # Test data info
         self.test_sample_num = 105000
@@ -104,5 +106,10 @@ class NetConfig:
         self.total_layers_num = self.conv_layers_num + self.dense_layers_num
         self.filter_sizes = top_config.filter_sizes
         self.feature_map_nums = top_config.feature_map_nums
+
+        if top_config.restore_network_from_file:
+            self.restore_layers = top_config.layer_num
+        else:
+            self.restore_layers = 0
 
 

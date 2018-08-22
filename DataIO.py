@@ -50,8 +50,10 @@ class IntfIO:
 
         return intf_labels
 
+
 class TrainingDataIO:
-    def __init__(self, feature_filename, label_filename, intf_filename, total_training_samples, feature_length, noise_label_length):
+    def __init__(self, feature_filename, label_filename, intf_filename, total_training_samples, feature_length,
+                 noise_label_length):
         print("Construct the data IO class for training!\n")
         self.fin_label = open(label_filename, "rb")
         self.fin_feature = open(feature_filename, "rb")
@@ -66,8 +68,55 @@ class TrainingDataIO:
         self.fin_label.close()
         self.fin_intf.close()
 
+    def load_next_minibatch(self, minibatch_size, factor_of_start_pos=1):
+        remain_samples = minibatch_size
+        remain_samples_i = minibatch_size
+        sample_id = np.random.randint(self.total_training_samples)
+
+        features = np.zeros(0)
+        noise_labels = np.zeros(0)
+        intf_labels = np.zeros(0)
+        if minibatch_size > self.total_training_samples:
+            print(">>> Mini batch size should not be larger than total sample size!\n")
+        self.fin_feature.seek((self.feature_length * 4) * (sample_id // factor_of_start_pos * factor_of_start_pos),
+                              0)  # float32 = 4 bytes = 32 bits
+        self.fin_label.seek((self.label_length * 4) * (sample_id // factor_of_start_pos * factor_of_start_pos), 0)
+        self.fin_intf.seek((1 * 4) * (sample_id // factor_of_start_pos * factor_of_start_pos), 0)
+
+        while 1:
+            new_feature = np.fromfile(self.fin_feature, np.float32, self.feature_length * remain_samples)
+            new_noise_label = np.fromfile(self.fin_label, np.float32, self.label_length * remain_samples)
+            new_intf_label = np.fromfile(self.fin_intf, np.float32, 1 * remain_samples_i)
+
+            features = np.concatenate((features, new_feature))
+            noise_labels = np.concatenate((noise_labels, new_noise_label))
+            intf_labels = np.concatenate((intf_labels, new_intf_label))
+
+            remain_samples -= len(new_feature) // self.feature_length
+            remain_samples_i -= len(new_intf_label)
+
+            if remain_samples == 0 or remain_samples_i == 0:
+                print("rs: %d" % remain_samples, "\trsi: %d" % remain_samples_i)
+                break
+
+            self.fin_feature.seek(0, 0)
+            self.fin_label.seek(0, 0)
+            self.fin_intf.seek(0, 0)
+
+        features = features.reshape((minibatch_size, self.feature_length))
+        labels = noise_labels.reshape((minibatch_size, self.label_length))
+        intf_labels = intf_labels.reshape((minibatch_size, 1))
+
+        print("features: ", np.shape(features))
+        print("noise labels: ", np.shape(labels))
+        print("intf labels: ", np.shape(intf_labels))
+
+        return features, labels, intf_labels
+
+
 class TestDataIO:
-    def __init__(self, feature_filename, label_filename, intf_filename, total_test_samples, feature_length, noise_label_length):
+    def __init__(self, feature_filename, label_filename, intf_filename, total_test_samples, feature_length,
+                 noise_label_length):
         print("Construct the data IO class for test!\n")
         self.fin_label = open(label_filename, "rb")
         self.fin_feature = open(feature_filename, "rb")

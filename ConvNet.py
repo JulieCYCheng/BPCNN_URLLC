@@ -19,7 +19,7 @@ class ConvNet:
         self.net_id = net_id
         self.res_noise_power_dict = {}
         self.res_noise_pdf_dict = {}
-        self.trade_off = 1.0  # total_loss = noise_loss + (trade_off * intf_loss)
+        self.trade_off = 1.0  # total_loss = trade_off * noise_loss + (1-trade_off) * intf_loss
 
     def build_network(self, built_for_training=False):
         x_in = tf.placeholder(tf.float32, [None, self.net_config.feature_length], name='x_in')
@@ -81,7 +81,11 @@ class ConvNet:
         i_out = tf.layers.dense(inputs=layer_output[self.net_config.total_layers_num - 1], units=1)
         i_out = tf.reshape(i_out, [-1, 1])
 
-        print('CNN network built!')
+        print("CNN network built!")
+        print("Noise output shape:")
+        print(y_out.get_shape)
+        print("Indicator output shape:")
+        print(i_out.get_shape)
 
         return x_in, y_out, i_out
 
@@ -119,7 +123,7 @@ class ConvNet:
                     self.res_noise_power_dict[data[i, 0]] = data[i, 1:shape_data[1]]
         return self.res_noise_power_dict
 
-    def train_network(self):
+    def train_network(self, model_id):
         start = datetime.datetime.now()
         dataio_train = DataIO.TrainingDataIO(self.train_config.training_feature_file,
                                              self.train_config.training_noise_label_file,
@@ -133,3 +137,52 @@ class ConvNet:
                                         self.train_config.test_sample_num,
                                         self.net_config.feature_length,
                                         self.net_config.noise_label_length)
+
+        x_in, y_out, i_out = self.build_network(True)
+
+        # Define loss function
+        y_label = tf.placeholder(tf.float32, (None, self.net_config.noise_label_length), "y_label")
+        i_label = tf.placeholder(tf.float32, (None, 1), "i_label")
+
+        y_loss = tf.reduce_mean(tf.square(y_out - y_label))
+        i_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=i_label, logits=i_out)
+
+        total_loss = self.trade_off * y_loss + (1-self.trade_off) * i_loss
+
+        # Stochastic Gradient Descent (SGD): Adam
+        train_step = tf.train.AdamOptimizer().minimize(total_loss)
+
+        # Initialize operation
+        init = tf.global_variables_initializer()
+
+        # Create a session and run initialization
+        sess = tf.Session()
+        sess.run(init)
+
+        self.restore_network_with_model_id(sess, self.net_config.restore_layers, model_id)
+
+        # # calculate the loss before training and assign it to min_loss
+        # min_loss, ave_org_loss = self.test_network_online(dataio_test, x_in, y_label, i_label, orig_loss_for_test,
+        #                                                   test_loss, True, sess)
+        #
+        # self.save_network_temporarily(sess)
+
+        # Training start
+        count = 0
+        epoch = 0
+        print('Iteration\tLoss')
+
+        while epoch < self.train_config.epoch_num:
+            epoch += 1
+            batch_xs, batch_ys, batch_i = dataio_train.load_next_minibatch(self.train_config.training_minibatch_size)
+            sess.run([train_step], feed_dict={x_in: batch_xs, y_label: batch_ys, i_label: batch_i})
+
+            # if epoch % 500 == 0 or epoch == self.train_config.epoch_num:
+            #     print(epoch)
+            #     ave_loss_after_train, _ = self.test_network_online(dataio_test, x_in, y_label, i_label,
+            #                                                        orig_loss_for_test, test_loss, False, sess)
+
+    # def test_network_online(self):
+
+
+

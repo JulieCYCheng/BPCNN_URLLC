@@ -3,6 +3,7 @@ import Configurations
 import LinearBlkCodes as lbc
 import DataIO
 import Iterative_BP_CNN as ibc
+import ConvNet
 
 # Get configuration
 top_config = Configurations.TopConfig()
@@ -25,5 +26,9 @@ if top_config.function == 'GenData':
 
     print("Finish GenData!")
 
+elif top_config.function == "Train":
+    net_id = top_config.currently_trained_net_id
+    conv_net = ConvNet.ConvNet(net_config, train_config, net_id)
+    conv_net.train_network(top_config.model_id)
 
 

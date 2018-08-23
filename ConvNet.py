@@ -67,11 +67,13 @@ class ConvNet:
             layer_output[layer] = tf.nn.relu(
                 tf.nn.conv2d(layer_input, self.conv_filter[layer], [1, 1, 1, 1], 'SAME') + self.bias[layer])
 
+        layer_output[self.net_config.conv_layers_num - 1] = \
+            tf.reshape(layer_output[self.net_config.conv_layers_num - 1], [-1, self.net_config.feature_length])
+
         # Dense layer
         for layer in range(self.net_config.conv_layers_num, self.net_config.total_layers_num):
             layer_output[layer] = tf.layers.dense(inputs=layer_output[layer - 1], units=self.net_config.feature_length,
                                                   activation=tf.nn.relu)
-            layer_output[layer] = tf.reshape(layer_output[layer], [-1, self.net_config.feature_length])
 
         # Multiple task
         y_out = tf.layers.dense(inputs=layer_output[self.net_config.total_layers_num - 1],
@@ -159,7 +161,7 @@ class ConvNet:
         sess = tf.Session()
         sess.run(init)
 
-        self.restore_network_with_model_id(sess, self.net_config.restore_layers, model_id)
+        # self.restore_network_with_model_id(sess, self.net_config.restore_layers, model_id)
 
         # # calculate the loss before training and assign it to min_loss
         # min_loss, ave_org_loss = self.test_network_online(dataio_test, x_in, y_label, i_label, orig_loss_for_test,
@@ -176,13 +178,3 @@ class ConvNet:
             epoch += 1
             batch_xs, batch_ys, batch_i = dataio_train.load_next_minibatch(self.train_config.training_minibatch_size)
             sess.run([train_step], feed_dict={x_in: batch_xs, y_label: batch_ys, i_label: batch_i})
-
-            # if epoch % 500 == 0 or epoch == self.train_config.epoch_num:
-            #     print(epoch)
-            #     ave_loss_after_train, _ = self.test_network_online(dataio_test, x_in, y_label, i_label,
-            #                                                        orig_loss_for_test, test_loss, False, sess)
-
-    # def test_network_online(self):
-
-
-

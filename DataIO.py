@@ -70,8 +70,7 @@ class TrainingDataIO:
 
     def load_next_minibatch(self, minibatch_size, factor_of_start_pos=1):
         remain_samples = minibatch_size
-        remain_samples_i = minibatch_size
-        sample_id = np.random.randint(self.total_training_samples)
+        sample_id = np.random.randint(self.total_training_samples - minibatch_size)
 
         features = np.zeros(0)
         noise_labels = np.zeros(0)
@@ -86,17 +85,15 @@ class TrainingDataIO:
         while 1:
             new_feature = np.fromfile(self.fin_feature, np.float32, self.feature_length * remain_samples)
             new_noise_label = np.fromfile(self.fin_label, np.float32, self.label_length * remain_samples)
-            new_intf_label = np.fromfile(self.fin_intf, np.float32, 1 * remain_samples_i)
+            new_intf_label = np.fromfile(self.fin_intf, np.float32, 1 * remain_samples)
 
             features = np.concatenate((features, new_feature))
             noise_labels = np.concatenate((noise_labels, new_noise_label))
             intf_labels = np.concatenate((intf_labels, new_intf_label))
 
             remain_samples -= len(new_feature) // self.feature_length
-            remain_samples_i -= len(new_intf_label)
 
-            if remain_samples == 0 or remain_samples_i == 0:
-                print("rs: %d" % remain_samples, "\trsi: %d" % remain_samples_i)
+            if remain_samples == 0:
                 break
 
             self.fin_feature.seek(0, 0)
@@ -104,14 +101,14 @@ class TrainingDataIO:
             self.fin_intf.seek(0, 0)
 
         features = features.reshape((minibatch_size, self.feature_length))
-        labels = noise_labels.reshape((minibatch_size, self.label_length))
+        noise_labels = noise_labels.reshape((minibatch_size, self.label_length))
         intf_labels = intf_labels.reshape((minibatch_size, 1))
 
         print("features: ", np.shape(features))
-        print("noise labels: ", np.shape(labels))
+        print("noise labels: ", np.shape(noise_labels))
         print("intf labels: ", np.shape(intf_labels))
 
-        return features, labels, intf_labels
+        return features, noise_labels, intf_labels
 
 
 class TestDataIO:

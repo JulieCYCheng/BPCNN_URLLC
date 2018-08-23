@@ -79,17 +79,17 @@ class TrainConfig:
         self.currently_trained_net_id = top_config.currently_trained_net_id
 
         # Training data info
-        self.training_sample_num = 1999200
-        self.training_minibatch_size = 1400
+        self.training_sample_num = 1400  # 1999200
+        self.training_minibatch_size = 14  # 1400
         self.training_folder = "./TrainingData"
         self.training_feature_file = format("./TrainingData/EstNoise_before_cnn%d.dat" % self.currently_trained_net_id)
         self.training_noise_label_file = "./TrainingData/RealNoise.dat"
         self.training_intf_label_file = "./TrainingData/RealIntf.dat"
-        self.epoch_num = 200000
+        self.epoch_num = 100  # 200000
 
         # Test data info
-        self.test_sample_num = 105000
-        self.test_minibatch_size = 3500
+        self.test_sample_num = 105  # 105000
+        self.test_minibatch_size = 35  # 3500
         self.test_folder = "./TestData"
         self.test_feature_file = format("./TestData/EstNoise_before_cnn%d.dat" % self.currently_trained_net_id)
         self.test_noise_label_file = "./TestData/RealNoise.dat"
@@ -106,6 +106,7 @@ class NetConfig:
         self.total_layers_num = self.conv_layers_num + self.dense_layers_num
         self.filter_sizes = top_config.filter_sizes
         self.feature_map_nums = top_config.feature_map_nums
+        self.save_layers = self.total_layers_num + 1
 
         if top_config.restore_network_from_file:
             self.restore_layers = top_config.layer_num

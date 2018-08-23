@@ -103,6 +103,8 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
             # reconstruct noise
             noise_before_cnn = y_receive - (u_BP_decoded * (-2) + 1)
             noise_before_cnn = noise_before_cnn.astype(np.float32)
+            ch_noise = ch_noise.astype(np.float32)
+            intf_labels = intf_labels.astype(np.float32)
             noise_before_cnn.tofile(fout_est_noise)     # write features to file
             ch_noise.tofile(fout_real_noise)            # write noise labels to file
             intf_labels.tofile(fout_real_intf)          # write interference labels to file

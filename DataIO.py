@@ -104,10 +104,6 @@ class TrainingDataIO:
         noise_labels = noise_labels.reshape((minibatch_size, self.label_length))
         intf_labels = intf_labels.reshape((minibatch_size, 1))
 
-        print("features: ", np.shape(features))
-        print("noise labels: ", np.shape(noise_labels))
-        print("intf labels: ", np.shape(intf_labels))
-
         return features, noise_labels, intf_labels
 
 

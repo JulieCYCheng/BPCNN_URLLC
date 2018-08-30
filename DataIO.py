@@ -117,12 +117,34 @@ class TestDataIO:
         self.total_test_samples = total_test_samples
         self.feature_length = feature_length
         self.label_length = noise_label_length
-        # self.all_features = np.zeros(0)
-        # self.all_labels = np.zeros(0)
-        # self.data_position = 0
+        self.all_features = np.zeros(0)
+        self.all_noise_labels = np.zeros(0)
+        self.all_intf_labels = np.zeros(0)
+        self.data_position = 0
 
     def __del__(self):
         print(">>> Delete the training data IO class! (DataIO.py)\n")
         self.fin_feature.close()
         self.fin_label.close()
         self.fin_intf.close()
+
+    def load_batch_for_test(self, batch_size):
+        if batch_size > self.total_test_samples:
+            print("Batch size should not be larger than total sample size!\n")
+        if np.size(self.all_features) == 0:
+            self.all_features = np.fromfile(self.fin_feature, np.float32, self.feature_length * self.total_test_samples)
+            self.all_noise_labels = np.fromfile(self.fin_label, np.float32, self.label_length * self.total_test_samples)
+            self.all_intf_labels = np.fromfile(self.fin_intf, np.float32, self.total_test_samples)
+
+            self.all_features = np.reshape(self.all_features, [self.total_test_samples, self.feature_length])
+            self.all_noise_labels = np.reshape(self.all_noise_labels, [self.total_test_samples, self.label_length])
+            self.all_intf_labels = np.reshape(self.all_intf_labels, [self.total_test_samples, 1])
+
+        features = self.all_features[self.data_position:(self.data_position + batch_size), :]
+        noise_labels = self.all_noise_labels[self.data_position:(self.data_position + batch_size), :]
+        intf_labels = self.all_intf_labels[self.data_position:(self.data_position + batch_size), :]
+
+        self.data_position += batch_size
+        if self.data_position >= self.total_test_samples:
+            self.data_position = 0
+        return features, noise_labels, intf_labels

@@ -43,52 +43,62 @@ class ConvNet:
 
             if built_for_training:
                 # Xavier initialization for training
-                self.conv_filter[layer] = tf.get_variable(name=self.conv_filter_name[layer],
-                                                          shape=[self.net_config.filter_sizes[layer], 1, in_channels,
-                                                                 out_channels],
-                                                          dtype=tf.float32,
-                                                          initializer=tf.contrib.layers.xavier_initializer())
+                self.layers[layer] = tf.get_variable(name=self.layer_name[layer],
+                                                     shape=[self.net_config.filter_sizes[layer], 1, in_channels,
+                                                            out_channels],
+                                                     dtype=tf.float32,
+                                                     initializer=tf.contrib.layers.xavier_initializer())
                 self.bias[layer] = tf.get_variable(name=self.bias_name[layer], shape=[out_channels],
                                                    dtype=tf.float32, initializer=tf.contrib.layers.xavier_initializer())
-                self.best_conv_filter[layer] = tf.Variable(
+                self.best_layer[layer] = tf.Variable(
                     tf.ones([self.net_config.filter_sizes[layer], 1, in_channels, out_channels], tf.float32),
                     dtype=tf.float32)
                 self.best_bias[layer] = tf.Variable(tf.ones([out_channels], tf.float32), dtype=tf.float32)
-                self.assign_best_conv_filter[layer] = self.best_conv_filter[layer].assign(self.conv_filter[layer])
+                self.assign_best_layer[layer] = self.best_layer[layer].assign(self.layers[layer])
                 self.assign_best_bias[layer] = self.best_bias[layer].assign(self.bias[layer])
             else:
                 # just build tensors for testing and their values will be loaded later.
-                self.conv_filter[layer] = tf.Variable(
+                self.layers[layer] = tf.Variable(
                     tf.random_normal([self.net_config.filter_sizes[layer], 1, in_channels, out_channels], 0, 1,
                                      tf.float32), dtype=tf.float32,
-                    name=self.conv_filter_name[layer])
+                    name=self.layer_name[layer])
                 self.bias[layer] = tf.Variable(tf.random_normal([out_channels], 0, 1, tf.float32), dtype=tf.float32,
                                                name=self.bias_name[layer])
 
             layer_output[layer] = tf.nn.relu(
-                tf.nn.conv2d(layer_input, self.conv_filter[layer], [1, 1, 1, 1], 'SAME') + self.bias[layer])
+                tf.nn.conv2d(layer_input, self.layers[layer], [1, 1, 1, 1], 'SAME') + self.bias[layer])
+            print("Layer %d (Conv.) shape:" % layer, np.shape(layer_output[layer]))
 
         layer_output[self.net_config.conv_layers_num - 1] = \
             tf.reshape(layer_output[self.net_config.conv_layers_num - 1], [-1, self.net_config.feature_length])
+        print("Layer %d (Conv.) reshape:" % (self.net_config.conv_layers_num - 1),
+              np.shape(layer_output[self.net_config.conv_layers_num - 1]))
 
         # Dense layer
         for layer in range(self.net_config.conv_layers_num, self.net_config.total_layers_num):
+            self.layer_name[layer] = format("dense_layer%d" % layer)
+            self.bias_name[layer] = format("b%d" % layer)
+
             layer_output[layer] = tf.layers.dense(inputs=layer_output[layer - 1], units=self.net_config.feature_length,
-                                                  activation=tf.nn.relu)
+                                                  activation=tf.nn.relu, name=self.layer_name[layer])
+            print("Layer %d (Dense) shape:" % layer, np.shape(layer_output[layer]))
 
         # Multiple task
+        self.layer_name[self.net_config.total_layers_num] = "output_layer_noise"
+        self.bias_name[self.net_config.total_layers_num] = "b_noise"
         y_out = tf.layers.dense(inputs=layer_output[self.net_config.total_layers_num - 1],
-                                units=self.net_config.feature_length)
+                                units=self.net_config.feature_length, name="output_layer_noise")
         y_out = tf.reshape(y_out, [-1, self.net_config.feature_length])
 
-        i_out = tf.layers.dense(inputs=layer_output[self.net_config.total_layers_num - 1], units=1)
+        self.layer_name[self.net_config.total_layers_num + 1] = "output_layer_intf"
+        self.bias_name[self.net_config.total_layers_num + 1] = "b_intf"
+        i_out = tf.layers.dense(inputs=layer_output[self.net_config.total_layers_num - 1], units=1,
+                                name="output_layer_intf")
         i_out = tf.reshape(i_out, [-1, 1])
 
         print("CNN network built!")
-        print("Noise output shape:")
-        print(y_out.get_shape)
-        print("Indicator output shape:")
-        print(i_out.get_shape)
+        print("Noise output shape:", y_out.get_shape)
+        print("Indicator output shape:", i_out.get_shape)
 
         return x_in, y_out, i_out
 
@@ -201,12 +211,11 @@ class ConvNet:
         sess = tf.Session()
         sess.run(init)
 
-        # self.restore_network_with_model_id(sess, self.net_config.restore_layers, model_id)
+        self.restore_network_with_model_id(sess, self.net_config.restore_layers, model_id)
 
         # # calculate the loss before training and assign it to min_loss
-        # min_loss, ave_org_loss = self.test_network_online(dataio_test, x_in, y_label, i_label, orig_loss_for_test,
-        #                                                   test_loss, True, sess)
-        #
+        min_loss = self.test_network_online(dataio_test, x_in, y_label, i_label, test_loss, sess)
+
         # self.save_network_temporarily(sess)
 
         # Training start
@@ -218,3 +227,21 @@ class ConvNet:
             epoch += 1
             batch_xs, batch_ys, batch_i = dataio_train.load_next_minibatch(self.train_config.training_minibatch_size)
             sess.run([train_step], feed_dict={x_in: batch_xs, y_label: batch_ys, i_label: batch_i})
+
+            if epoch % 500 == 0 or epoch == self.train_config.epoch_num:
+                print(epoch)
+                ave_loss_after_train = self.test_network_online(dataio_test, x_in, y_label, i_label, test_loss, sess)
+                if ave_loss_after_train < min_loss:
+                    min_loss = ave_loss_after_train
+                    # self.save_network_temporarily(sess)
+                    count = 0
+                else:
+                    count += 1
+                    if count >= 8:  # no patience
+                        break
+
+        self.save_network(sess, model_id)
+        sess.close()
+        end = datetime.datetime.now()
+        print('Final minimum loss: %f' % min_loss)
+        print('Used time for training: %ds' % (end - start).seconds)

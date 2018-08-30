@@ -126,6 +126,44 @@ class ConvNet:
                     self.res_noise_power_dict[data[i, 0]] = data[i, 1:shape_data[1]]
         return self.res_noise_power_dict
 
+    def test_network_online(self, dataio, x_in, y_label, i_label, loss_after_training, sess_in):
+        # this function is used to test the network loss online when training network
+        remain_samples = self.train_config.test_sample_num
+        load_batch_size = self.train_config.test_minibatch_size
+        ave_loss_after_train = 0.0
+        while remain_samples > 0:
+            if remain_samples < self.train_config.test_minibatch_size:
+                load_batch_size = remain_samples
+
+            batch_xs, batch_ys, batch_i = dataio.load_batch_for_test(load_batch_size)  # features, labels
+
+            loss_after_training_value = sess_in.run(loss_after_training,
+                                                    feed_dict={x_in: batch_xs, y_label: batch_ys, i_label: batch_i})
+            remain_samples -= load_batch_size
+            ave_loss_after_train += loss_after_training_value * load_batch_size
+
+        ave_loss_after_train /= np.double(self.train_config.test_sample_num)
+        print(ave_loss_after_train)
+        return ave_loss_after_train
+
+    def save_network(self, sess_in, model_id):
+        # save network
+        save_dict = {}
+        for layer in range(self.net_config.save_layers):
+            save_dict[self.layer_name[layer]] = self.best_layer[layer]
+            save_dict[self.bias_name[layer]] = self.best_bias[layer]
+
+        model_id_str = np.array2string(model_id, separator='_', formatter={'int': lambda d: "%d" % d})
+        model_id_str = model_id_str[1:(len(model_id_str) - 1)]
+        save_model_folder = format("%snetid%d_model%s" % (self.net_config.model_folder, self.net_id, model_id_str))
+
+        if not os.path.exists(save_model_folder):
+            os.makedirs(save_model_folder)
+        save_model_name = format("%s/model.ckpt" % save_model_folder)
+        saver_save = tf.train.Saver(save_dict)
+        saver_save.save(sess_in, save_model_name)
+        print("Save %d layers.\n" % self.net_config.save_layers)
+
     def train_network(self, model_id):
         start = datetime.datetime.now()
         dataio_train = DataIO.TrainingDataIO(self.train_config.training_feature_file,

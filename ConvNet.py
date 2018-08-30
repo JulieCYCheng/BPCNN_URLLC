@@ -2,19 +2,20 @@ import numpy as np
 import tensorflow as tf
 import datetime
 import DataIO
+import os
 
 
 class ConvNet:
     def __init__(self, net_config, train_config, net_id):
         self.net_config = net_config
         self.train_config = train_config
-        self.conv_filter_name = {}
+        self.layer_name = {}
         self.bias_name = {}
-        self.conv_filter = {}
+        self.layers = {}
         self.bias = {}
-        self.best_conv_filter = {}
+        self.best_layer = {}
         self.best_bias = {}
-        self.assign_best_conv_filter = {}
+        self.assign_best_layer = {}
         self.assign_best_bias = {}
         self.net_id = net_id
         self.res_noise_power_dict = {}
@@ -28,7 +29,7 @@ class ConvNet:
         layer_output = {}
 
         for layer in range(self.net_config.conv_layers_num):
-            self.conv_filter_name[layer] = format("conv_layer%d" % layer)
+            self.layer_name[layer] = format("conv_layer%d" % layer)
             self.bias_name[layer] = format("b%d" % layer)
 
             if layer == 0:
@@ -96,7 +97,7 @@ class ConvNet:
         save_dict = {}
         if restore_layers_num > 0:
             for layer in range(restore_layers_num):
-                save_dict[self.conv_filter_name[layer]] = self.conv_filter[layer]
+                save_dict[self.layer_name[layer]] = self.layers[layer]
                 save_dict[self.bias_name[layer]] = self.bias[layer]
             model_id_str = np.array2string(model_id, separator='_', formatter={'int': lambda d: "%d" % d})
             model_id_str = model_id_str[1:(len(model_id_str) - 1)]
@@ -149,7 +150,8 @@ class ConvNet:
         y_loss = tf.reduce_mean(tf.square(y_out - y_label))
         i_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=i_label, logits=i_out)
 
-        total_loss = self.trade_off * y_loss + (1-self.trade_off) * i_loss
+        total_loss = self.trade_off * y_loss + (1 - self.trade_off) * i_loss
+        test_loss = total_loss
 
         # Stochastic Gradient Descent (SGD): Adam
         train_step = tf.train.AdamOptimizer().minimize(total_loss)

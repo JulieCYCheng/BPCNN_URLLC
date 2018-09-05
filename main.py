@@ -30,3 +30,5 @@ elif top_config.function == 'Train':
     net_id = top_config.currently_trained_net_id
     conv_net = ConvNet.ConvNet(net_config, train_config, net_id)
     conv_net.train_network(top_config.model_id)
+
+    print("Finish Train!")

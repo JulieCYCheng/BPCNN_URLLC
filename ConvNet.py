@@ -136,11 +136,13 @@ class ConvNet:
                     self.res_noise_power_dict[data[i, 0]] = data[i, 1:shape_data[1]]
         return self.res_noise_power_dict
 
-    def test_network_online(self, dataio, x_in, y_label, i_label, loss_after_training, sess_in):
+    def test_network_online(self, dataio, x_in, y_label, i_label, loss_after_training, yloss_after_training, iloss_after_training, sess_in):
         # this function is used to test the network loss online when training network
         remain_samples = self.train_config.test_sample_num
         load_batch_size = self.train_config.test_minibatch_size
         ave_loss_after_train = 0.0
+        ave_yloss_after_train = 0.0
+        ave_iloss_after_train = 0.0
         while remain_samples > 0:
             if remain_samples < self.train_config.test_minibatch_size:
                 load_batch_size = remain_samples
@@ -149,11 +151,17 @@ class ConvNet:
 
             loss_after_training_value = sess_in.run(loss_after_training,
                                                     feed_dict={x_in: batch_xs, y_label: batch_ys, i_label: batch_i})
+            y_loss_value = sess_in.run(yloss_after_training,
+                                       feed_dict={x_in: batch_xs, y_label: batch_ys, i_label: batch_i})
+            i_loss_value = sess_in.run(iloss_after_training,
+                                       feed_dict={x_in: batch_xs, y_label: batch_ys, i_label: batch_i})
             remain_samples -= load_batch_size
             ave_loss_after_train += loss_after_training_value * load_batch_size
+            ave_yloss_after_train += y_loss_value * load_batch_size
+            ave_iloss_after_train += i_loss_value * load_batch_size
 
         ave_loss_after_train /= np.double(self.train_config.test_sample_num)
-        print(ave_loss_after_train)
+        print(ave_loss_after_train, ave_yloss_after_train, ave_iloss_after_train)
         return ave_loss_after_train
 
     def save_network(self, sess_in, model_id):
@@ -200,6 +208,8 @@ class ConvNet:
 
         total_loss = self.trade_off * y_loss + (1 - self.trade_off) * i_loss
         test_loss = total_loss
+        test_y_loss = y_loss
+        test_i_loss = i_loss
 
         # Stochastic Gradient Descent (SGD): Adam
         train_step = tf.train.AdamOptimizer().minimize(total_loss)
@@ -230,7 +240,8 @@ class ConvNet:
 
             if epoch % 500 == 0 or epoch == self.train_config.epoch_num:
                 print(epoch)
-                ave_loss_after_train = self.test_network_online(dataio_test, x_in, y_label, i_label, test_loss, sess)
+                ave_loss_after_train = self.test_network_online(dataio_test, x_in, y_label, i_label,
+                                                                test_loss, test_y_loss, test_i_loss, sess)
                 if ave_loss_after_train < min_loss:
                     min_loss = ave_loss_after_train
                     # self.save_network_temporarily(sess)

@@ -5,6 +5,7 @@ import tensorflow as tf
 import datetime
 import os
 import LinearBlkCodes as lbc
+import DataIO
 
 
 def generate_snr_set(top_config):
@@ -12,6 +13,7 @@ def generate_snr_set(top_config):
     SNR_set = np.arange(top_config.SNR_set_start, SNR_set_end, 0.5, dtype=np.float32)
 
     return SNR_set
+
 
 def denoising_and_calc_LLR_awgn(res_noise_power, y_receive, output_pre_decoder, net_in, net_out, intf_out, sess):
     # estimate noise with cnn denoising
@@ -24,9 +26,9 @@ def denoising_and_calc_LLR_awgn(res_noise_power, y_receive, output_pre_decoder, 
     LLR = s_mod_plus_res_noise * 2.0 / res_noise_power
     return LLR, predicted_intf_ind
 
+
 def generate_noise_samples(code, top_config, train_config, net_config, gen_data_for, bp_iter_num, num_of_cnn, model_id,
                            noise_io, intf_io):
-
     global batch_size_each_SNR, total_batches
     G_matrix = code.G_matrix
     H_matrix = code.H_matrix
@@ -55,9 +57,9 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
     denoise_net_out = {}
     intf_net_out = {}
 
-    for net_id in range(num_of_cnn):        # TODO: Doesn't work if num_of_cnn=0
+    for net_id in range(num_of_cnn):  # TODO: Doesn't work if num_of_cnn=0
         conv_net[net_id] = ConvNet.ConvNet(net_config, None, net_id)
-        denoise_net_in[net_id], denoise_net_out[net_id],  intf_net_out[net_id] = conv_net[net_id].build_network()
+        denoise_net_in[net_id], denoise_net_out[net_id], intf_net_out[net_id] = conv_net[net_id].build_network()
 
     # Init gragh
     init = tf.global_variables_initializer()
@@ -65,7 +67,7 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
     sess.run(init)
 
     # Restore cnn networks before the target CNN        # TODO: Doesn't work if num_of_cnn=0
-    for net_id in range(num_of_cnn):                    # TODO: Why restore here?
+    for net_id in range(num_of_cnn):  # TODO: Why restore here?
         conv_net[net_id].restore_network_with_model_id(sess, net_config.total_layers, model_id[0:(net_id + 1)])
 
     start = datetime.datetime.now()
@@ -89,7 +91,9 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
     # Generating data
     for ik in range(total_batches):
         for SNR in top_config.SNR_set_gen_training:
-            x_bits, _, _, ch_noise, intf_labels, y_receive, LLR = lbc.encode_and_transmit(G_matrix, SNR, batch_size_each_SNR, noise_io, intf_io, top_config)
+            x_bits, _, _, ch_noise, intf_labels, y_receive, LLR = lbc.encode_and_transmit(G_matrix, SNR,
+                                                                                          batch_size_each_SNR, noise_io,
+                                                                                          intf_io, top_config)
 
             for iter in range(0, num_of_cnn + 1):
                 # BP decoder
@@ -98,16 +102,18 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
                 # CNN
                 if iter != num_of_cnn:
                     res_noise_power = conv_net[iter].get_res_noise_power(model_id).get(np.float32(SNR))
-                    LLR, predicted_intf_ind = denoising_and_calc_LLR_awgn(res_noise_power, y_receive, u_BP_decoded, denoise_net_in[iter], denoise_net_out[iter], intf_net_out[iter], sess)
+                    LLR, predicted_intf_ind = denoising_and_calc_LLR_awgn(res_noise_power, y_receive, u_BP_decoded,
+                                                                          denoise_net_in[iter], denoise_net_out[iter],
+                                                                          intf_net_out[iter], sess)
 
             # reconstruct noise
             noise_before_cnn = y_receive - (u_BP_decoded * (-2) + 1)
             noise_before_cnn = noise_before_cnn.astype(np.float32)
             ch_noise = ch_noise.astype(np.float32)
             intf_labels = intf_labels.astype(np.float32)
-            noise_before_cnn.tofile(fout_est_noise)     # write features to file
-            ch_noise.tofile(fout_real_noise)            # write noise labels to file
-            intf_labels.tofile(fout_real_intf)          # write interference labels to file
+            noise_before_cnn.tofile(fout_est_noise)  # write features to file
+            ch_noise.tofile(fout_real_noise)  # write noise labels to file
+            intf_labels.tofile(fout_real_intf)  # write interference labels to file
 
         if ik % 100 == 0:
             print("%d batches finished!" % ik)
@@ -123,3 +129,41 @@ def generate_noise_samples(code, top_config, train_config, net_config, gen_data_
 
     print("Time: %ds" % (end - start).seconds)
     print("Finish generating %s data" % gen_data_for)
+
+
+def simulation(linear_code, top_config, net_config, simutimes_range, target_err_bits_num, batch_size):
+    SNRset = generate_snr_set(top_config)
+    bp_iter_num = top_config.BP_iter_nums_simu
+    noise_io = DataIO.NoiseIO(top_config, False, None, rng_seed=0)
+    denoising_net_num = top_config.cnn_net_num
+    model_id = top_config.model_id
+
+    G_matrix = linear_code.G_matrix
+    H_matrix = linear_code.H_matrix
+    K, N = np.shape(G_matrix)
+
+    ## build BP decoding network
+    if np.size(bp_iter_num) != denoising_net_num + 1:
+        print('>>> Error: the length of bp_iter_num is not correct! (Iterative_BP_CNN.py)')
+        print(bp_iter_num, np.size(bp_iter_num))
+        print(denoising_net_num)
+        exit(0)
+    bp_decoder = BP_Decoder.BP_NetDecoder(H_matrix, batch_size)
+
+    conv_net = {}
+    denoise_net_in = {}
+    denoise_net_out = {}
+    # build network for each CNN denoiser,
+    for net_id in range(denoising_net_num):
+        if net_id > 0:
+            conv_net[net_id] = conv_net[0]
+            denoise_net_in[net_id] = denoise_net_in[0]
+            denoise_net_out[net_id] = denoise_net_out[0]
+        else:
+            conv_net[net_id] = ConvNet.ConvNet(net_config, None, net_id)
+            denoise_net_in[net_id], denoise_net_out[net_id], _ = conv_net[net_id].build_network()
+    # init gragh
+    init = tf.global_variables_initializer()
+    sess = tf.Session()
+    print('Open a tf session!')
+    sess.run(init)

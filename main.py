@@ -4,6 +4,7 @@ import LinearBlkCodes as lbc
 import DataIO
 import Iterative_BP_CNN as ibc
 import ConvNet
+import numpy as np
 
 # Get configuration
 top_config = Configurations.TopConfig()
@@ -32,3 +33,13 @@ elif top_config.function == 'Train':
     conv_net.train_network(top_config.model_id)
 
     print("Finish Train!")
+
+elif top_config.function == 'Simulation':
+    batch_size = 5000
+
+    simutimes_range = np.array([np.ceil(1e7 / float(top_config.K * batch_size)) * batch_size,
+                                 np.ceil(1e8 / float(top_config.K * batch_size)) * batch_size], np.int32)
+
+    ibc.simulation(code, top_config, net_config, simutimes_range, 1000, batch_size)
+    print("Finished Simulation!")
+
